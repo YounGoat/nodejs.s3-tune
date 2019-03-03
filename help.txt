@@ -1,0 +1,56 @@
+
+NAME
+    s3-tune - Sync data between S3 and local file system.
+
+SYNOPSIS
+    s3-tune (backup | restore) 
+    --aws-config <pathname> --bucket <bucket-name> --directory <pathname> 
+    [--concurrency <number>] [--retry <times>] [--start-over | --fill] [--force] 
+    [--mapper <js-pathname>]
+    [--filter <js-pathname>]
+    [--dual-meta-filter <js-pathname>]
+    [--prefix <prefix>]
+
+ARGUMENTS 
+    --aws-config <pathname>
+    A JSON file which contains AWS config data.
+
+    --directory <pathname>
+    Local directory.
+
+    --bucket <bucket-name>
+    Bucket name.
+
+    --prefix <pathname>
+    Only objects whose names contain specified prefix will be sychronized. 
+    Only available for sub-command restore.
+
+    --concurrency <number>
+    Number of objects to be written in one batch.
+
+    --retry <times>
+    Times to retry when error occurs in some step.
+
+    --start-over
+    Start over, ignoring the mark which indicates the position last 
+    synchronization moved on.
+
+    --fill
+    To re-sync those which are ignored in previous sync progresses.
+
+    --force
+    Run even if the target directory already exists and not empty. Only 
+    available when sync from remote storage to local file system.
+
+    --mapper <js-pathname>
+    A Node.js module which transforms source object / file name to target 
+    object / file name.
+
+    --filter <js-pathname>
+    An Node.js module which filter source objects / files by name.
+    Only available for sub-command restore.
+
+    --dual-meta-filter <js-pathname>
+    A Node.js module which filter objects depending on the meta info of source
+    and target object (if exists).
+    Only available for sub-command restore.

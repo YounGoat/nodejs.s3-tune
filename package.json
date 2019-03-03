@@ -1,0 +1,41 @@
+{
+    "name": "s3-tune",
+    "version": "0.0.1",
+    "description": "Backup and restore AWS S3.",
+    "main": "index.js",
+    "bin": {
+        "s3-tune": "bin/s3-tune.js"
+    },
+    "directories": {
+        "lib": "lib"
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": {
+        "name": "YounGoat",
+        "email": "youngoat@163.com",
+        "url": "https://youngoat.github.io/"
+    },
+    "license": "ISC",
+    "dependencies": {
+        "aws-sdk": "^2.409.0",
+        "commandos": "^0.3.1",
+        "jinang": "^0.24.0",
+        "noda": "^0.5.0",
+        "qir": "^0.0.1"
+    },
+    "devDependencies": {},
+    "keywords": [
+        "aws",
+        "s3",
+        "fs",
+        "backup",
+        "restore"
+    ],
+    "homepage": "https://github.com/YounGoat/nodejs.s3-tune",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/YounGoat/nodejs.s3-tune.git"
+    }
+}
