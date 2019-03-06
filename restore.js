@@ -2,7 +2,6 @@
 
 const MODULE_REQUIRE = 1
     /* built-in */
-    , events = require('events')
     , fs = require('fs')
     , path = require('path')
     , util = require('util')
@@ -12,6 +11,7 @@ const MODULE_REQUIRE = 1
     , fsStat = util.promisify(fs.stat)
     
     /* NPM */
+    , mime = require('mime')
     , noda = require('noda')
     , Progress = require('jinang/Progress')
     , cloneObject = require('jinang/cloneObject')
@@ -51,7 +51,7 @@ function restore(options) {
     options = Object.assign({
         maxCreating : 3,
         maxCreated  : Number.MAX_SAFE_INTEGER,
-        maxQueueing : 100000,
+        maxQueueing : 1000,
         maxErrors   : Number.MAX_SAFE_INTEGER,
         retry       : 3,
     }, options);
@@ -146,6 +146,7 @@ function restore(options) {
     const create = async (keyName, pathname) => {
         const Bucket = options.bucket;
         const Key = options.mapper ? options.mapper(keyName) : keyName;
+        const ContentType = mime.getType(Key);       
 
         if (options.filter && !options.filter(keyName)) {
             return 4; // 4 means skipped
@@ -160,7 +161,7 @@ function restore(options) {
         }
 
         let buf = await fsReadFile(pathname);
-        await s3PutObject({ Bucket, Key, Body: buf });
+        await s3PutObject({ Bucket, Key, ContentType, Body: buf });
         return 2;
     };
 

@@ -2,13 +2,13 @@
 
 const MODULE_REQUIRE = 1
     /* built-in */
+    , fs = require('fs')
     , path = require('path')
+    , util = require('util')
     
     /* NPM */
-    , noda = require('noda')
     , Progress = require('jinang/Progress')
     , cloneObject = require('jinang/cloneObject')
-    , Directory = require('jinang/Directory')
     , qirAsync = require('qir/asyncing')
     
     /* in-package */
@@ -126,44 +126,32 @@ function backup(options) {
 
     // ---------------------------
     // Main process.
-    
+
     // 执行创建操作。
     // 在本地文件系统中创建文件。
-    const create = (keyName) => {
-        counter.creating++;
-
-        let onFinal = (err, status = 2) => {
-            if (err) {
-                on_create_error(err, keyName);
-            }
-            else {
-                archive(keyName, status); 
-                // 2 means created
-                // 3 means ignored
-            }
-            counter.creating--;
-            next();
-        };
-
+    const s3GetObject = util.promisify(s3.getObject.bind(s3));
+    const fsUtimes = util.promisify(fs.utimes);
+    
+    const create = async (keyName) => {        
         if (keyName.endsWith('/')) {
-            onFinal(null, 3); // 3 means ignored
-            return;
+            return 3; // 3 means ignored
         }
 
-        let pathname = path.join(options.directory, options.mapper ? options.mapper(keyName) : keyName);
+        let localName = options.mapper ? options.mapper(keyName) : keyName;
+        let pathname = path.join(options.directory, localName);
 
-        s3.getObject({
+        let data = await s3GetObject({
             Bucket: options.bucket,
             Key: keyName,
-        }, (err, data) => {
-            if (err) {
-                onFinal(err);
-            }
-            else {
-                let buf = data.Body.data;
-                qirAsync.writeFile(pathname, buf).then(onFinal, onFinal);
-            }
-        });
+        }); 
+
+        // Write file.
+        await qirAsync.writeFile(pathname, data.Body);
+
+        // Update atime / mtime to LastModified time of S3 object.
+        await fsUtimes(pathname, data.LastModified, data.LastModified);
+        
+        return 2;
     };
 
     // 调度队列，尝试执行下一个创建操作。
@@ -185,7 +173,14 @@ function backup(options) {
             let itemInUnarchived = queue.unarchived.find((q) => q[0] == keyName);
             itemInUnarchived[1] = 1;
 
-            create(keyName);
+            counter.creating++;
+            create(keyName)
+                .then(status => archive(keyName, status))
+                .catch(err => on_create_error(err, keyName))
+                .then(() => {
+                    counter.creating--;
+                    next();
+                });
             return true;
         }
     };

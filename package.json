@@ -1,6 +1,6 @@
 {
     "name": "s3-tune",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Backup and restore AWS S3.",
     "main": "index.js",
     "bin": {
@@ -22,6 +22,7 @@
         "aws-sdk": "^2.409.0",
         "commandos": "^0.3.1",
         "jinang": "^0.24.0",
+        "mime": "^2.4.0",
         "noda": "^0.5.0",
         "qir": "^0.0.1"
     },
