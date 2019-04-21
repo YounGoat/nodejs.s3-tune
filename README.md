@@ -9,9 +9,22 @@ Here, *directory* is located in local file system and made up of files and sub d
 
 ##	Table of Contents
 
-*	[Get Started](#get-started)
-*	[Connection Config](#connection-config)
-*	[API](#api)
+* [Links](#links)
+* [Get Started](#get-started)
+* [AWS Config](#aws-config)
+* [CLI](#cli)
+* [API](#api)
+	* [Parameter `options`](#parameter-options)
+	* [Get Into Sync Progress](#get-into-sync-progress)
+	* [Progress Events](#progress-events)
+		* [Event: 'created'  ](#event-created-)
+		* [Event: 'end'  ](#event-end-)
+		* [Event: 'error'  ](#event-error-)
+		* [Event: 'ignored'  ](#event-ignored-)
+		* [Event: 'moveon'  ](#event-moveon-)
+		* [Event: 'no-utf8-filename'](#event-no-utf8-filename)
+		* [Event: 'skipped'  ](#event-skipped-)
+		* [Event: 'warning'  ](#event-warning-)
 
 ##	Links
 
@@ -76,7 +89,7 @@ __s3-tune__ will occupy a hidden directory named `.s3-tune` in home directory of
 
 ##	API
 
-__s3-tune__ offers two functions to achieve different tasks:
+__s3-tune__ offers functions to achieve two different tasks:
 
 *	jinang/Progress __backup__(object *options*)
 *	jinang/Progress __restore__(object *options*)
@@ -96,7 +109,29 @@ s3tune.backup
 s3backup
 ```
 
+For convenience, triditional invoking styles are also supported:
+
+*	void __backup__(object *options*, Function *callback*)
+*	void __restore__(object *options*, Function *callback*)
+*	Promise __backup.promise__(object *options*)
+*	Promise __restore.promise__(object *options*)
+
+In traditional styles, the task is regarded as resolved only when all objects successfully uploaded or downloaded. Even if only one failure (something ignored) happens, it fails!
+
 ###	Parameter `options`
+
+*	AWS.S3 __options.s3__  
+	Instance of [`AWS.S3`](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html).
+
+*	string __options.bucket__  
+	S3 bucket name.
+
+*	string __options.directory__  
+	Absolute pathname in local file system.
+
+*	string __options.marker__  
+	Position indicating where to start.  
+	The marker should be an object name.
 
 *	string[] __options.names__  
 	Object names to be stored into or restored from local file system.
@@ -108,7 +143,7 @@ s3backup
 	Object name filter.  
 	For `s3tune.restore()` only.
 
-*	Function __options.dualMetaFilter__
+*	Function __options.dualMetaFilter__  
 	Filter with paramenter `(stat, meta)`.  
 	For `s3tune.restore()` only.
 
@@ -117,6 +152,10 @@ s3backup
 
 *	number __options.maxCreating__  
 	Maximum cocurrent creating operation allowed.
+
+*	number __options.maxQueueing__  
+	Maximum queue length allowed.  
+	When the queue length reaches this number, the progress will pause finding more objects / files until some in queue finished.
 
 *	number __options.maxErrors__  
 	Maximum exceptions allowed (then the progress will be terminated).
@@ -137,32 +176,118 @@ Via the returned instance of `jinang/Progress`, we may learn about what happened
 *	__progress.quit__()  
 	Quit the progress gracefully.
 
-###	Events During Sync Progress
+###	Progress Events
 
-####	Event: '__created__'  
-*	Object *meta*
+Function `s3tune.restore()` or `s3tune.backup()` will return an instance of [`jinang/Progress`](https://github.com/YounGoat/jinang/blob/HEAD/docs/Progress.md). And the returned `progress` is also an instance of `events.EventEmitter` and may emit following events:
 
-####	Event: '__moveon__'  
-*	string *mark*
+*	[created](#event-created)
+*	[end](#event-created)
+*	[error](#event-created)
+*	[ignored](#event-created)
+*	[moveon](#event-created)
+*	[no-utf8-filename](#event-no-utf8-filename)
+*	[skipped](#event-created)
+*	[warning](#event-created)
 
-####	Event: '__ignored__'  
-*	Object *meta*
+Following the conventions in [Node.js Documentation](https://nodejs.org/docs/latest/api/), the avaiable event data will be written in list which follows the section title. E.g.
 
-####	Event: '__skipped__'  
-*	Object *meta*
+```javascript
+progress.on('fallInLove', function(boy, girl /* , ... */) {
+	// ...
+});
+```
+
+Aavailable event data will be listed under the event title. Looks like:  
+__Events: 'fallInLove'__
+*	Person __*boy*__
+	*	string __*name*__
+	*	number __*age*__
+*	Person __*girl*__
+	*	string __*name*__
+	*	number __*age*__
+
+Not all events are emitted with data. And some or sometimes will be emitted with more than one parameter.
+
+####	Event: 'created'  
+
+*	Object __*meta*__
+	*	string __*name*__  
+		Name of object, also the relative pathname of file.
+
+Emitted each time an object put to S3 bucket (in restore mode), or a file written in local file system (in backup mode).
+
+####	Event: 'end'  
+
+*	Object __*stat*__
+	*	number __*errors*__  
+		Total errors caught.
+	*	number __*created*__  
+		Total objects or files created.
+	*	number __*ignored*__  
+		Total objects or files ignored because of exceptions.
+
+Emitted when the progress accomplished or terminated on too many errors. See `options.maxErrors` in [Parameter options](#parameter-options).
+
+####	Event: 'error'  
+
+*	Error __*error*__
+*	Object __*stat*__  
+	See [Event: 'end'](#event-end) for details of *stat*.
+
+An __error__ event will be emitted only when:
+
+1. 	some exception happens when putting object to S3 or writing file in local file system, and 
+2.	it can not be overcome by retrying in limited times.   
+
+If there are retry chances left, an [Event: 'warning'](#event-warning) will be emitted instead.
+
+See `options.retry` in [Parameter options](#parameter-options).
+
+####	Event: 'ignored'  
+
+See [Event: 'created'](#event-created) for associated event data.
+
+Emitted each time failed to put an object to S3 bucket, or to write a file to local file system. 
+
+####	Event: 'moveon'  
+
+*	string __*marker*__  
+	Actually, the mark is just the name of object to which the cursor points.
+
+In functions `s3tune.backup()` and `s3tune.restore()`, multiple create operations will be made concurrently. The create operations begin in sequence but not always end in the same order. Event __moveon__ will be emitted when something finished (['created'](#event-created) or ['ignored'](#event-ignored)), and all those ranked ahead have also been finished.
+
+If the progress terminated by exceptions, you can restart it from the position marked by *marker*.
+
+See `options.marker` in [Parameter options](#parameter-options). 
+
+####	Event: 'no-utf8-filename'
+
+*	Object __*fileInfo*__
+	*	string __*dirname*__
+	*	Buffer __*filenameBuffer*__
+
+Only emitted in `s3tune.restore()`, each time on meeting with file or directory whose name is not utf-8 encoded. Such file or directory will not be restored to S3 bucket and no ['ignored'](#event-ignored) or ['skipped'](#event-skipped) will be emitted.
+
+####	Event: 'skipped'  
+
+See [Event: 'created'](#event-created) for associated event data.
+
+Emmited each time when something skipped by the filter.
+
+See `options.filter` and `options.dualMetaFilter__` in [Parameter options](#parameter-options).
+
 	
-####	Event: '__warning__'  
-*	Error *error*
+####	Event: 'warning'  
 
-####	Event: '__error__'  
-*	Error *error*
+*	Error __*error*__
+*	Object __*stat*__  
+	See [Event: 'end'](#event-end) for details of *stat*.
 
-####	Event: '__end__'  
-*	Object *meta*  
-	```javascript
-	{
-		errors /* number */,
-		created /* number */, 
-		ignored /* number */,
-	}
-	```
+A __warning__ event will be emitted only when:
+
+1. 	some exception happens when putting object to S3 or writing file in local file system, and 
+2.	there are still chances left to retry.   
+
+When all retry chances are exhausted, an [Event: 'error'](#event-error) will be emitted instead.
+
+See `options.retry` in [Parameter options](#parameter-options).

@@ -12,6 +12,7 @@ const MODULE_REQUIRE = 1
     , qirAsync = require('qir/asyncing')
     
     /* in-package */
+    , asynchronise = noda.inRequire('lib/asynchronise')
 
     /* in-file */
     ;
@@ -333,4 +334,4 @@ function backup(options) {
     return progress;
 }
 
-module.exports = backup;
+module.exports = asynchronise(backup);

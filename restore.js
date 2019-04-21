@@ -19,6 +19,7 @@ const MODULE_REQUIRE = 1
     
     /* in-package */
     , Marker = noda.inRequire('class/Marker')
+    , asynchronise = noda.inRequire('lib/asynchronise')
 
     /* in-file */
     ;
@@ -27,6 +28,7 @@ const MODULE_REQUIRE = 1
  * @param  {object}     options.s3                 instance of AWS.S3
  * @param  {string}     options.bucket             bucket name
  * @param  {string}     options.directory          directory in local file system
+ * @param  {string}    [options.marker]            position indicating where to start
  * @param  {string[]}  [options.names]             object names to be synchronised
  * @param  {Function}  [options.mapper]            object names mapper
  * @param  {Function}  [options.filter]            object names filter
@@ -368,4 +370,4 @@ function restore(options) {
     return progress;
 }
 
-module.exports = restore;
+module.exports = asynchronise(restore);
