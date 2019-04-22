@@ -16,6 +16,7 @@ const MODULE_REQUIRE = 1
     , Progress = require('jinang/Progress')
     , cloneObject = require('jinang/cloneObject')
     , sleep = require('jinang/sleep')
+    , obtions = require('obtions')
     
     /* in-package */
     , Marker = noda.inRequire('class/Marker')
@@ -47,6 +48,27 @@ function restore(options) {
 
     // ---------------------------
     // Uniform & validate arguments.
+
+    options = obtions(options, {
+        caseSensitive: false,
+        keepNameCase: true,
+        explicit: true,
+        columns: [
+            's3 REQUIRED',
+            'bucket REQUIRED',
+            'directory REQUIRED',
+            'marker',
+            'names',
+            'mapper', 
+            'filter',
+            'dualMetaFilter', 
+            'maxCreated',
+            'maxCreating',
+            'maxQueueing',
+            'maxErrors',
+            'retry',
+        ],
+    });
 
     const s3 = options.s3;
 
@@ -363,7 +385,10 @@ function restore(options) {
             on_register_finished();
         }
         else {
-            run(options.directory, []);
+            run(options.directory, []).catch(ex => {
+                progress.emit('error', ex);
+                progress.abort();
+            });
         }
     });
 
