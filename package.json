@@ -1,6 +1,6 @@
 {
     "name": "s3-tune",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Backup and restore AWS S3.",
     "main": "index.js",
     "bin": {
